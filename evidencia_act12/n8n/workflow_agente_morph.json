@@ -1,0 +1,174 @@
+{
+  "name": "Agente matrices - morph dona-taza (Act12)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Chat",
+      "webhookId": "a1000000-0000-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "Eres un asistente de una calculadora de matrices y de un visor 3D. Usa las herramientas disponibles para responder y explica en espanol, de forma breve, lo que devuelven."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        300,
+        0
+      ],
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Agente matrices"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Calcula la deformacion (morph) de una dona a una taza. Parametros: t (numero, 0 = dona, 1 = taza) y resolucion (entero, nivel de detalle de la malla). Devuelve un resumen del resultado.",
+        "method": "POST",
+        "url": "http://calculadora:8000/calc/morph",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"t\": {t}, \"resolucion\": {resolucion}}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "t",
+              "description": "Factor de deformacion: 0 es la dona y 1 es la taza",
+              "type": "number"
+            },
+            {
+              "name": "resolucion",
+              "description": "Nivel de detalle de la malla (entero)",
+              "type": "number"
+            }
+          ]
+        },
+        "optimizeResponse": true,
+        "responseType": "json",
+        "fieldsToInclude": "selected",
+        "fields": "t,resolucion,estado,total_puntos,resumen_markdown"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        150,
+        260
+      ],
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "morph_dona_taza"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Guarda una figura del morph dona-taza con un nombre. Parametros: nombre (texto), t (numero entre 0 y 1) y resolucion (entero).",
+        "method": "POST",
+        "url": "http://calculadora:8000/figuras",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"nombre\": \"{nombre}\", \"t\": {t}, \"resolucion\": {resolucion}}",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "nombre",
+              "description": "Nombre de la figura",
+              "type": "string"
+            },
+            {
+              "name": "t",
+              "description": "Factor de deformacion",
+              "type": "number"
+            },
+            {
+              "name": "resolucion",
+              "description": "Nivel de detalle de la malla (entero)",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        350,
+        260
+      ],
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "guardar_figura"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Lista todas las figuras guardadas (id, nombre, t y resolucion).",
+        "method": "GET",
+        "url": "http://calculadora:8000/figuras"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        550,
+        260
+      ],
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "listar_figuras"
+    }
+  ],
+  "connections": {
+    "Chat": {
+      "main": [
+        [
+          {
+            "node": "Agente matrices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "morph_dona_taza": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente matrices",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "guardar_figura": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente matrices",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "listar_figuras": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente matrices",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

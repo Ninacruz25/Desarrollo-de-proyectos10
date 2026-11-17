@@ -1,0 +1,4 @@
+CONTROL: el servidor siempre responde bien     | morph enviados tras el fallo: 10/10 movimientos | transform enviados: 80/10 (primero=-5, ultimo enviado=-0.1, valor final del slider=-0.1) | conexiones=1
+A: el servidor responde ERROR al morph         | morph enviados tras el fallo:  0/10 movimientos | transform enviados: 80/10 (primero=-5, ultimo enviado=-0.1, valor final del slider=-0.1) | conexiones=1
+B: el servidor no responde a la transformacion | morph enviados tras el fallo: 10/10 movimientos | transform enviados:  0/10 (primero=-, ultimo enviado=-, valor final del slider=0) | conexiones=1
+C: conexion cae con un morph en vuelo (reconecta) | morph enviados tras el fallo:  0/10 movimientos | transform enviados:  0/10 (primero=-, ultimo enviado=-, valor final del slider=2.4) | conexiones=2

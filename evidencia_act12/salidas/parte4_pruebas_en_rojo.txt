@@ -1,0 +1,74 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.15, pytest-9.2.0, pluggy-1.7.0 -- /private/tmp/claude-502/-Users-gianinacasanova-Documents-TecSw-gerardo-Desarrollo-de-proyectos10/8c85ce9e-0478-40c0-81d2-87a6d65f0e32/scratchpad/t/bin/python
+rootdir: /Users/gianinacasanova/Documents/TecSw/gerardo/Desarrollo-de-proyectos10
+configfile: pyproject.toml
+plugins: playwright-0.10.0, anyio-4.16.0
+collecting ... collected 7 items
+
+test_e2e/test_review_act12_defectos.py::test_hallazgo_taza_es_continua_en_t1 FAILED [ 14%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_figuras_tienen_limite_de_almacenamiento FAILED [ 28%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_nombre_con_instrucciones_para_el_agente_se_rechaza FAILED [ 42%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_figuras_no_son_visibles_ni_borrables_por_otro_cliente FAILED [ 57%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": NaN, "resolucion": 50}] FAILED [ 71%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": Infinity, "resolucion": 50}] FAILED [ 85%]
+test_e2e/test_review_act12_defectos.py::test_hallazgo_websocket_rechaza_origin_ajeno FAILED [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_hallazgo_taza_es_continua_en_t1 _____________________
+test_e2e/test_review_act12_defectos.py:55: in test_hallazgo_taza_es_continua_en_t1
+    assert max(saltos) < 4 * mediana, (
+E   AssertionError: v=0: salto de 9.76 frente a un paso típico de 0.41 (en u=99->0)
+E   assert 9.756087840932963 < (4 * 0.4114)
+E    +  where 9.756087840932963 = max([0.7155755445793271, 0.713674554681614, 0.7100787843612844, 0.7048399038079504, 0.698376238141018, 0.6909833138361584, ...])
+____________ test_hallazgo_figuras_tienen_limite_de_almacenamiento _____________
+test_e2e/test_review_act12_defectos.py:72: in test_hallazgo_figuras_tienen_limite_de_almacenamiento
+    assert estados != {200}, "300 figuras distintas aceptadas: no hay límite de almacenamiento"
+E   AssertionError: 300 figuras distintas aceptadas: no hay límite de almacenamiento
+E   assert {200} != {200}
+E     
+E     Both sets are equal
+_______ test_hallazgo_nombre_con_instrucciones_para_el_agente_se_rechaza _______
+test_e2e/test_review_act12_defectos.py:84: in test_hallazgo_nombre_con_instrucciones_para_el_agente_se_rechaza
+    assert r.status_code == 422, f"aceptó el nombre con instrucciones (HTTP {r.status_code})"
+E   AssertionError: aceptó el nombre con instrucciones (HTTP 200)
+E   assert 200 == 422
+E    +  where 200 = <Response [200 OK]>.status_code
+_____ test_hallazgo_figuras_no_son_visibles_ni_borrables_por_otro_cliente ______
+test_e2e/test_review_act12_defectos.py:98: in test_hallazgo_figuras_no_son_visibles_ni_borrables_por_otro_cliente
+    assert creada["id"] not in visibles, "otro cliente ve la figura de alguien más"
+E   AssertionError: otro cliente ve la figura de alguien más
+E   assert 1 not in [1]
+_ test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": NaN, "resolucion": 50}] _
+test_e2e/test_review_act12_defectos.py:114: in test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500
+    assert r.status_code == 422, f"HTTP {r.status_code} en lugar de 422 con el cuerpo {cuerpo}"
+E   AssertionError: HTTP 500 en lugar de 422 con el cuerpo {"t": NaN, "resolucion": 50}
+E   assert 500 == 422
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+_ test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": Infinity, "resolucion": 50}] _
+test_e2e/test_review_act12_defectos.py:114: in test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500
+    assert r.status_code == 422, f"HTTP {r.status_code} en lugar de 422 con el cuerpo {cuerpo}"
+E   AssertionError: HTTP 500 en lugar de 422 con el cuerpo {"t": Infinity, "resolucion": 50}
+E   assert 500 == 422
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+_________________ test_hallazgo_websocket_rechaza_origin_ajeno _________________
+test_e2e/test_review_act12_defectos.py:136: in test_hallazgo_websocket_rechaza_origin_ajeno
+    with pytest.raises(WebSocketDisconnect):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE WebSocketDisconnect
+----------------------------- Captured stdout call -----------------------------
+Cliente WebSocket desconectado
+=============================== warnings summary ===============================
+../../../../../../private/tmp/claude-502/-Users-gianinacasanova-Documents-TecSw-gerardo-Desarrollo-de-proyectos10/8c85ce9e-0478-40c0-81d2-87a6d65f0e32/scratchpad/t/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /private/tmp/claude-502/-Users-gianinacasanova-Documents-TecSw-gerardo-Desarrollo-de-proyectos10/8c85ce9e-0478-40c0-81d2-87a6d65f0e32/scratchpad/t/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_taza_es_continua_en_t1
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_figuras_tienen_limite_de_almacenamiento
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_nombre_con_instrucciones_para_el_agente_se_rechaza
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_figuras_no_son_visibles_ni_borrables_por_otro_cliente
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": NaN, "resolucion": 50}]
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_nan_e_infinito_se_rechazan_con_422_no_con_500[{"t": Infinity, "resolucion": 50}]
+FAILED test_e2e/test_review_act12_defectos.py::test_hallazgo_websocket_rechaza_origin_ajeno
+========================= 7 failed, 1 warning in 0.56s =========================

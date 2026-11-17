@@ -1,0 +1,18 @@
+SOBREVIVE (ninguna prueba falla)     | M1 signo invertido en la dona (z = -r*sin v)
+                                       13 passed, 1 warning in 0.14s
+SOBREVIVE (ninguna prueba falla)     | M2 signo invertido de la taza en la mezcla (pz = (1-t)*D - t*C)
+                                       13 passed, 1 warning in 0.14s
+DETECTADO                            | M3 morph al reves (t y 1-t intercambiados)
+                                       1 failed, 12 passed, 1 warning in 0.14s | test_e2e/test_morph.py::test_morph_t0_coincide_con_dona
+SOBREVIVE (ninguna prueba falla)     | M4 sin tope de resolucion en el servicio (4..100 -> 4..100000)
+                                       13 passed, 1 warning in 0.14s
+SOBREVIVE (ninguna prueba falla)     | M5 sin tope de resolucion en el modelo (le=100 -> le=100000)
+                                       13 passed, 1 warning in 0.15s
+SOBREVIVE (ninguna prueba falla)     | M6 taza: pared interior invertida en z (rad*sin(v) -> -rad*sin(v))
+                                       13 passed, 1 warning in 0.14s
+SOBREVIVE (ninguna prueba falla)     | M7 guardar ya no es idempotente por nombre (siempre crea otra)
+                                       13 passed, 1 warning in 0.14s
+DETECTADO                            | M8 DELETE no borra (devuelve True sin eliminar)
+                                       1 failed, 12 passed, 1 warning in 0.15s | test_e2e/test_morph.py::test_guardar_y_listar_figura_morph
+SOBREVIVE (ninguna prueba falla)     | M9 cuerpo de la taza desplazado 100 unidades en x
+                                       13 passed, 1 warning in 0.14s

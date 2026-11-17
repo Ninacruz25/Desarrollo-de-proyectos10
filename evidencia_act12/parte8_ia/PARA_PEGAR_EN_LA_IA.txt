@@ -1,0 +1,1254 @@
+Actúa como revisor de código senior. Revisa el siguiente Pull Request de un proyecto con dos servicios FastAPI (una "Calculadora de matrices" en el puerto 8000 y un "Modelador 3D" con visor web y WebSocket en el puerto 8001), orquestados con Docker Compose. La IA generó parte del código.
+
+Quiero una revisión completa del diff, como la haría un equipo profesional. Revisa estos puntos:
+- Si el código hace lo que dice la descripción del PR, incluidos los casos límite.
+- Matemática y funcionalidad.
+- Arquitectura por capas (API -> servicios -> repositorio) y separación de responsabilidades entre los dos servicios.
+- Validación de entradas (tipo, rango y tamaño máximo).
+- Seguridad (OWASP: inyección, XSS, diseño inseguro y abuso de recursos, configuración, control de acceso, manejo de errores).
+- Idempotencia de las operaciones.
+- Calidad de las pruebas: si fallarían cuando el código esté mal, o si solo comprueban que "pasan".
+- Documentación (OpenAPI) y si la descripción del PR es honesta.
+- Alcance del PR y calidad de los commits.
+
+Para cada hallazgo usa este formato:
+- **[Severidad]** (Bloqueante / Mayor / Menor / Nit / Pregunta)
+- **Dónde:** archivo y línea o función
+- **Qué:** el problema, en una frase
+- **Por qué importa:** el riesgo o la consecuencia
+- **Evidencia:** el fragmento de código del diff que lo demuestra
+- **Sugerencia:** qué cambiarías, sin escribir todo el código
+
+Reglas:
+1. Basa cada hallazgo en el código del diff. Si no puedes verificar algo solo con el diff, dilo explícitamente en lugar de afirmarlo.
+2. No inventes líneas, funciones ni comportamientos que no aparezcan en el diff.
+3. Al final da una decisión (Approve, Request changes o Comment) con un párrafo que la justifique, y una lista de lo que no pudiste verificar.
+
+A continuación van la descripción del PR y el diff completo.
+
+================ DESCRIPCIÓN DEL PR ================
+
+# Título del PR
+feat: morph dona -> taza (endpoint, figuras guardadas, relevo al visor)
+
+# Descripción escrita por el autor
+## Objetivo del Pull Request
+Integrar la deformación topológica continua (**Morph Dona → Taza**) entre nuestros dos microservicios (`Calculadora de matrices` en el puerto `8000` y `Modelador3D_matrices` con interfaz *Glassmorphism* en el puerto `8001`).
+
+## Cambios Implementados por Capa
+1. **Motor Matemático (`Calculadora de matrices/app/services/matrix_service.py`):**
+   - Implementación de las superficies paramétricas `vertice_dona(u, v)`, `vertice_taza(u, v)` e interpolación lineal `calcular_morph(t, resolucion)`.
+2. **Routers Modulares (`Calculadora de matrices/app/api/routers/`):**
+   - **`operations.py` (`POST /operaciones/morph-3d` y `/calc/morph`):** Devuelve la nube de puntos interpolada y genera una tabla `resumen_markdown` con la caja envolvente (*bounding box*) lista para el agente de **n8n**.
+   - **`figuras.py` (`POST /figuras`, `GET /figuras`, `GET /figuras/{id}`, `DELETE /figuras/{id}`):** Nuevo router modular para guardar, consultar y eliminar figuras personalizadas del morph.
+3. **Visor 3D *Glassmorphism* (`Modelador3D_matrices/index.html` y `main.py`):**
+   - Nuevo botón **`☕ Dona→Taza`** en el selector de figuras con transición de color neón (`#00ffaa` → `#ff3399`), slider de porcentaje `0%..100%` y guardado por WebSocket (`/ws/transform`).
+4. **Suite de Pruebas (`test_e2e/`):**
+   - Nuevas pruebas en `test_morph.py`, `test_regresion_seguridad.py` y `test_vision.py` (13 pruebas en verde).
+
+## Cómo inicializar y probar
+```bash
+docker compose up --build -d
+# Calculadora (Estilo Excel): http://localhost:8000
+# Documentación Swagger API:  http://localhost:8000/docs
+# Visor 3D Glassmorphism:     http://localhost:8001/view (seleccionar botón "☕ Dona→Taza")
+```
+
+# Commits del PR (de más antiguo a más reciente)
+- b088337 chore: agregar docker-compose.yaml y pyproject.toml en la raiz del pr…
+- a7d799e feat(calculadora): agregar servicio y endpoints de morph dona->taza y…
+- 080d24a feat(modelador3d): integrar relevo WebSocket de morph y controles Don…
+- b32f6c1 test(morph): agregar pruebas de interpolacion dona->taza y guardado d…
+- 7a234e0 feat(calculadora): router modular figuras.py con DELETE, resumen_mark…
+
+================ DIFF COMPLETO DEL PR ================
+
+diff --git a/Calculadora de matrices/app/api/routers/figuras.py b/Calculadora de matrices/app/api/routers/figuras.py
+new file mode 100644
+index 0000000..217474f
+--- /dev/null
++++ b/Calculadora de matrices/app/api/routers/figuras.py	
+@@ -0,0 +1,36 @@
++from fastapi import APIRouter, HTTPException, Response
++from typing import List
++from app.models.models import FiguraMorphCreate, FiguraMorphOut
++from app.repositories.matrix_repo import figura_db
++
++router = APIRouter(prefix="/figuras", tags=["Figuras 3D Morph"])
++
++
++@router.post("", response_model=FiguraMorphOut)
++def guardar_figura(payload: FiguraMorphCreate):
++    """Guarda o actualiza (de forma idempotente por nombre) una figura del morph Dona -> Taza."""
++    return figura_db.guardar(payload.model_dump())
++
++
++@router.get("", response_model=List[FiguraMorphOut])
++def listar_figuras():
++    """Lista todas las figuras guardadas del morph Dona -> Taza."""
++    return figura_db.listar()
++
++
++@router.get("/{id}", response_model=FiguraMorphOut)
++def obtener_figura(id: int):
++    """Obtiene una figura guardada por su ID."""
++    figura = figura_db.obtener(id)
++    if not figura:
++        raise HTTPException(404, "Figura no encontrada")
++    return figura
++
++
++@router.delete("/{id}", status_code=204)
++def eliminar_figura(id: int):
++    """Elimina una figura guardada por su ID."""
++    if not figura_db.eliminar(id):
++        raise HTTPException(404, "Figura no encontrada")
++    return Response(status_code=204)
++
+diff --git a/Calculadora de matrices/app/api/routers/operations.py b/Calculadora de matrices/app/api/routers/operations.py
+index f07a5b5..468fc54 100644
+--- a/Calculadora de matrices/app/api/routers/operations.py	
++++ b/Calculadora de matrices/app/api/routers/operations.py	
+@@ -1,5 +1,6 @@
+-﻿from fastapi import APIRouter, HTTPException
++from fastapi import APIRouter, HTTPException
+ from app.repositories.matrix_repo import matrix_db
++from app.models.models import MorphParams
+ from app.services import matrix_service
+ from pydantic import BaseModel
+ from typing import List
+@@ -41,7 +42,7 @@ def multiplicar_secuencia(payload: MatrizSecuencia):
+     """Multiplica una secuencia de matrices al vuelo (sin usar la base de datos)."""
+     if not payload.matrices or len(payload.matrices) < 2:
+         raise HTTPException(400, "Debe enviar al menos 2 matrices")
+-    
++
+     try:
+         resultado = payload.matrices[0]
+         for matriz in payload.matrices[1:]:
+@@ -63,40 +64,40 @@ class TransformParams(BaseModel):
+ def transformacion_3d(params: TransformParams):
+     """Genera matrices 4x4 (Traslación * Rotación Z-Y-X) y las multiplica."""
+     rad_x, rad_y, rad_z = math.radians(params.rx), math.radians(params.ry), math.radians(params.rz)
+- 
++
+     Rx = [
+         [1.0, 0.0, 0.0, 0.0],
+         [0.0, math.cos(rad_x), -math.sin(rad_x), 0.0],
+         [0.0, math.sin(rad_x), math.cos(rad_x), 0.0],
+         [0.0, 0.0, 0.0, 1.0]
+     ]
+- 
++
+     Ry = [
+         [math.cos(rad_y), 0.0, math.sin(rad_y), 0.0],
+         [0.0, 1.0, 0.0, 0.0],
+         [-math.sin(rad_y), 0.0, math.cos(rad_y), 0.0],
+         [0.0, 0.0, 0.0, 1.0]
+     ]
+- 
++
+     Rz = [
+         [math.cos(rad_z), -math.sin(rad_z), 0.0, 0.0],
+         [math.sin(rad_z), math.cos(rad_z), 0.0, 0.0],
+         [0.0, 0.0, 1.0, 0.0],
+         [0.0, 0.0, 0.0, 1.0]
+     ]
+- 
++
+     T = [
+         [1.0, 0.0, 0.0, params.tx],
+         [0.0, 1.0, 0.0, params.ty],
+         [0.0, 0.0, 1.0, params.tz],
+         [0.0, 0.0, 0.0, 1.0]
+     ]
+-    
++
+     # Multiplicar en el orden correcto: T * Rz * Ry * Rx
+     res1 = matrix_service.multiplicar(Ry, Rx)
+     res2 = matrix_service.multiplicar(Rz, res1)
+     res3 = matrix_service.multiplicar(T, res2)
+-    
++
+     # 1. Formateo visual monoespaciado en bloque de código con corchetes
+     filas_txt = []
+     for row in res3:
+@@ -113,3 +114,41 @@ def transformacion_3d(params: TransformParams):
+         "matriz_renderizada": matriz_bloque,
+         "matriz_tabla_markdown": tabla_md
+     }
++
++
++@router.post("/morph")
++@router.post("/morph-3d")
++def morph_dona_taza(params: MorphParams):
++    """Calcula la malla interpolada entre la Dona (t=0) y la Taza (t=1) con resumen Markdown para n8n."""
++    try:
++        vertices = matrix_service.calcular_morph(params.t, params.resolucion)
++    except ValueError as e:
++        raise HTTPException(400, str(e))
++
++    xs = [p[0] for p in vertices]
++    ys = [p[1] for p in vertices]
++    zs = [p[2] for p in vertices]
++    porcentaje = round(params.t * 100, 1)
++    estado = "Dona (Toroide)" if params.t == 0 else ("Taza Completa" if params.t == 1 else f"Transición ({porcentaje}%)")
++
++    resumen_md = (
++        "| Propiedad | Valor |\n"
++        "| :--- | :---: |\n"
++        f"| **Estado Topológico** | {estado} |\n"
++        f"| **Factor t** | `{params.t:.2f}` ({porcentaje}%) |\n"
++        f"| **Resolución** | `{params.resolucion}x{params.resolucion}` |\n"
++        f"| **Total Vértices** | `{len(vertices)}` |\n"
++        f"| **Rango X** | `[{min(xs):.2f}, {max(xs):.2f}]` |\n"
++        f"| **Rango Y** | `[{min(ys):.2f}, {max(ys):.2f}]` |\n"
++        f"| **Rango Z** | `[{min(zs):.2f}, {max(zs):.2f}]` |\n"
++    )
++
++    return {
++        "t": params.t,
++        "resolucion": params.resolucion,
++        "estado": estado,
++        "total_puntos": len(vertices),
++        "resumen_markdown": resumen_md,
++        "vertices": vertices
++    }
++
+diff --git a/Calculadora de matrices/app/main.py b/Calculadora de matrices/app/main.py
+index 2d5889d..3d7082c 100644
+--- a/Calculadora de matrices/app/main.py	
++++ b/Calculadora de matrices/app/main.py	
+@@ -1,28 +1,29 @@
+-﻿from fastapi import FastAPI, Request
++from fastapi import FastAPI, Request
+ from fastapi.middleware.cors import CORSMiddleware
+ from fastapi.responses import FileResponse
+ from fastapi.staticfiles import StaticFiles
+ from pathlib import Path
+-from app.api.routers import matrices, operations
+-from app.api.routers.operations import TransformParams, transformacion_3d
++from app.api.routers import matrices, operations, figuras
++from app.api.routers.operations import TransformParams, transformacion_3d, morph_dona_taza
++from app.models.models import MorphParams
+ 
+ app = FastAPI(
+     title="Calculadora de Matrices API",
+-    description="API estructurada en capas para gestionar operaciones de matrices.",
+-    version="1.0.0"
++    description="API estructurada en capas para gestionar operaciones de matrices y transformaciones 3D.",
++    version="1.1.0"
+ )
+ 
+ # --- MITIGACIÓN OWASP: Middleware de Cabeceras de Seguridad ---
+ @app.middleware("http")
+ async def security_headers_middleware(request: Request, call_next):
+     response = await call_next(request)
+-    
++
+     # 1. Anti-Clickjacking
+     response.headers["X-Frame-Options"] = "DENY"
+-    
++
+     # 2. Protección contra MIME-Sniffing
+     response.headers["X-Content-Type-Options"] = "nosniff"
+-    
++
+     # 3. Content Security Policy (CSP): Adaptado para permitir Swagger UI en /docs
+     if request.url.path in ("/docs", "/redoc", "/openapi.json"):
+         response.headers["Content-Security-Policy"] = (
+@@ -42,17 +43,22 @@ async def security_headers_middleware(request: Request, call_next):
+             "connect-src 'self' http://localhost:8000; "
+             "frame-ancestors 'none';"
+         )
+-    
++
+     # 4. Ocultar información del servidor para evitar Fingerprinting
+     if "server" in response.headers:
+         del response.headers["server"]
+-        
++
+     return response
+ 
+ # --- MITIGACIÓN OWASP: Restricción estricta de CORS ---
+ app.add_middleware(
+     CORSMiddleware,
+-    allow_origins=["*"],
++    allow_origins=[
++        "http://localhost:8000",
++        "http://localhost:8001",
++        "http://127.0.0.1:8000",
++        "http://127.0.0.1:8001",
++    ],
+     allow_credentials=True,
+     allow_methods=["GET", "POST", "DELETE", "PUT", "OPTIONS"],
+     allow_headers=["*"],
+@@ -64,13 +70,21 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
+ # Registrar routers modulares
+ app.include_router(matrices.router)
+ app.include_router(operations.router)
++app.include_router(figuras.router)
+ 
+-# --- ALIAS DIRECTO PARA N8N Y VISOR ---
++# --- ALIAS DIRECTOS PARA N8N Y VISOR 3D ---
+ @app.post("/transformaciones/matriz")
+ def endpoint_transformaciones_matriz(params: TransformParams):
+     """Calcula la matriz homogénea 4x4 M = T*Rz*Ry*Rx para n8n y clientes 3D."""
+     return transformacion_3d(params)
+ 
++
++@app.post("/calc/morph")
++def endpoint_calc_morph(params: MorphParams):
++    """Calcula la deformación topológica Dona -> Taza y su tabla resumen Markdown."""
++    return morph_dona_taza(params)
++
++
+ INDEX = static_path / "index.html"
+ 
+ @app.get("/")
+diff --git a/Calculadora de matrices/app/models/models.py b/Calculadora de matrices/app/models/models.py
+index 9d45e95..d38a8aa 100644
+--- a/Calculadora de matrices/app/models/models.py	
++++ b/Calculadora de matrices/app/models/models.py	
+@@ -1,19 +1,56 @@
++import math
+ from pydantic import BaseModel, Field, field_validator
+ from typing import List, Optional
+ 
++MAX_DIMENSION_MATRIZ = 10
++MAX_MAGNITUD_VALOR = 1e9
++
++
+ class MatrixCreate(BaseModel):
+-    nombre: Optional[str] = None
++    nombre: Optional[str] = Field(default=None, max_length=60)
+     datos: List[List[float]] = Field(..., description="Matriz bidimensional de números")
+ 
+     @field_validator("datos")
+     @classmethod
+-    def filas_parejas(cls, v):
+-        if not v:
+-            return v
++    def validar_dimensiones_y_valores(cls, v):
++        if not v or not v[0]:
++            raise ValueError("La matriz no puede estar vacía")
++        if len(v) > MAX_DIMENSION_MATRIZ or len(v[0]) > MAX_DIMENSION_MATRIZ:
++            raise ValueError(
++                f"Por seguridad, la dimensión máxima permitida es {MAX_DIMENSION_MATRIZ}x{MAX_DIMENSION_MATRIZ}"
++            )
+         largos = [len(fila) for fila in v]
+         if len(set(largos)) > 1:
+             raise ValueError("Todas las filas deben tener el mismo largo")
++        for fila in v:
++            for val in fila:
++                if not math.isfinite(val) or abs(val) > MAX_MAGNITUD_VALOR:
++                    raise ValueError("Todos los valores deben ser números finitos dentro del rango permitido")
+         return v
+ 
++
+ class MatrixOut(MatrixCreate):
+     id: int
++
++
++class MorphParams(BaseModel):
++    t: float = Field(0.0, ge=0.0, le=1.0, allow_inf_nan=False, description="Factor de deformación: 0.0 = Dona, 1.0 = Taza")
++    resolucion: int = Field(50, ge=4, le=100, description="Resolución por eje (genera resolucion^2 vértices)")
++
++
++class FiguraMorphCreate(MorphParams):
++    nombre: str = Field(..., min_length=1, max_length=60, description="Nombre personalizado de la figura")
++
++    @field_validator("nombre")
++    @classmethod
++    def validar_nombre_seguro(cls, v: str) -> str:
++        limpio = v.strip()
++        if not limpio:
++            raise ValueError("El nombre de la figura no puede estar vacío ni contener solo espacios")
++        if any(c in limpio for c in ("<", ">", "{", "}", "\n", "\r")):
++            raise ValueError("El nombre contiene caracteres no permitidos")
++        return limpio
++
++
++class FiguraMorphOut(FiguraMorphCreate):
++    id: int
+diff --git a/Calculadora de matrices/app/repositories/matrix_repo.py b/Calculadora de matrices/app/repositories/matrix_repo.py
+index ead6468..f795994 100644
+--- a/Calculadora de matrices/app/repositories/matrix_repo.py	
++++ b/Calculadora de matrices/app/repositories/matrix_repo.py	
+@@ -1,5 +1,3 @@
+-from app.models.models import MatrixCreate
+-
+ class MatrixRepository:
+     def __init__(self):
+         self.db = {}
+@@ -29,5 +27,45 @@ class MatrixRepository:
+             return True
+         return False
+ 
++
+ # Instancia global (singleton para esta prueba en memoria)
+ matrix_db = MatrixRepository()
++
++
++class FiguraMorphRepository:
++    def __init__(self):
++        self.figuras = {}
++        self.counter = 1
++
++    def guardar(self, data: dict) -> dict:
++        nombre = data["nombre"].strip()
++        for fig in self.figuras.values():
++            if fig["nombre"] == nombre:
++                fig["t"] = data["t"]
++                fig["resolucion"] = data["resolucion"]
++                return fig
++
++        nueva = {
++            "id": self.counter,
++            "nombre": nombre,
++            "t": data["t"],
++            "resolucion": data["resolucion"],
++        }
++        self.figuras[self.counter] = nueva
++        self.counter += 1
++        return nueva
++
++    def listar(self) -> list:
++        return list(self.figuras.values())
++
++    def obtener(self, id: int) -> dict:
++        return self.figuras.get(id)
++
++    def eliminar(self, id: int) -> bool:
++        if id in self.figuras:
++            del self.figuras[id]
++            return True
++        return False
++
++
++figura_db = FiguraMorphRepository()
+diff --git a/Calculadora de matrices/app/services/matrix_service.py b/Calculadora de matrices/app/services/matrix_service.py
+index 395eed5..f9f6d1f 100644
+--- a/Calculadora de matrices/app/services/matrix_service.py	
++++ b/Calculadora de matrices/app/services/matrix_service.py	
+@@ -1,13 +1,16 @@
+-﻿def sumar(m1: list, m2: list) -> list:
++import math
++
++
++def sumar(m1: list, m2: list) -> list:
+     if len(m1) != len(m2) or len(m1[0]) != len(m2[0]):
+         raise ValueError("Las matrices deben tener la misma dimensión para sumarse.")
+-    
++
+     return [[m1[i][j] + m2[i][j] for j in range(len(m1[0]))] for i in range(len(m1))]
+ 
+ def multiplicar(m1: list, m2: list) -> list:
+     if len(m1[0]) != len(m2):
+         raise ValueError("El número de columnas de la matriz 1 debe ser igual al número de filas de la matriz 2.")
+-    
++
+     result = [[0.0 for _ in range(len(m2[0]))] for _ in range(len(m1))]
+     for i in range(len(m1)):
+         for j in range(len(m2[0])):
+@@ -26,20 +29,89 @@ def determinante(m: list) -> float:
+         raise ValueError("Matriz vacía.")
+     if len(m) != len(m[0]):
+         raise ValueError("La matriz debe ser cuadrada para calcular el determinante.")
+-    
++
+     # --- MITIGACIÓN SEGURIDAD: Protección contra DoS Algorítmico ---
+     # El algoritmo de Laplace tiene complejidad O(n!). Dimensiones superiores a 8
+     # saturan el uso de CPU provocando una denegación de servicio en el servidor.
+     if len(m) > 8:
+         raise ValueError("Por seguridad y protección contra denegación de servicio (DoS), el tamaño máximo para determinante es 8x8.")
+-    
++
+     n = len(m)
+     if n == 1:
+         return float(m[0][0])
+     if n == 2:
+         return float(m[0][0]*m[1][1] - m[0][1]*m[1][0])
+-    
++
+     det = 0
+     for c in range(n):
+         det += ((-1)**c) * m[0][c] * determinante(_get_minor(m, 0, c))
+     return float(det)
++
++
++def vertice_dona(u: float, v: float, R: float = 10.0, r: float = 5.0) -> list[float]:
++    """Calcula un vértice del Toroide (Dona) en el dominio paramétrico (u, v)."""
++    x = (R + r * math.cos(v)) * math.cos(u)
++    y = (R + r * math.cos(v)) * math.sin(u)
++    z = r * math.sin(v)
++    return [x, y, z]
++
++
++def vertice_taza(u: float, v: float) -> list[float]:
++    """Calcula un vértice de una Taza con asa sobre el mismo dominio (u, v) en [0, 2*pi)."""
++    fraccion_asa = 0.25 * 2 * math.pi
++    if u < fraccion_asa:
++        # Asa lateral de la taza
++        s = u / fraccion_asa
++        ang = math.pi / 2 - math.pi * s
++        cx = 5.5 + 4.5 * math.cos(ang)
++        cy = 4.0 * math.sin(ang)
++        r_asa = 1.2
++        return [
++            cx + r_asa * math.cos(v) * math.cos(ang),
++            cy + r_asa * math.cos(v) * math.sin(ang),
++            r_asa * math.sin(v),
++        ]
++    else:
++        # Cuerpo cilíndrico hueco de la taza
++        s = (u - fraccion_asa) / (2 * math.pi - fraccion_asa)
++        r_cuerpo = 6.5
++        altura = 12.0
++        if s < 0.25:
++            # Base inferior
++            rad = (s / 0.25) * r_cuerpo
++            y = -altura / 2
++        elif s < 0.65:
++            # Pared exterior
++            rad = r_cuerpo
++            y = -altura / 2 + ((s - 0.25) / 0.40) * altura
++        else:
++            # Pared interior hueca
++            rad = r_cuerpo - 0.8
++            y = altura / 2 - ((s - 0.65) / 0.35) * (altura - 1.2)
++        return [
++            -2.0 + rad * math.cos(v),
++            y,
++            rad * math.sin(v),
++        ]
++
++
++def calcular_morph(t: float, resolucion: int = 50) -> list[list[float]]:
++    """Interpola linealmente P(u,v,t) = (1 - t)*D(u,v) + t*T(u,v)."""
++    if not math.isfinite(t) or not (0.0 <= t <= 1.0):
++        raise ValueError("El parámetro t debe ser finito y estar entre 0.0 y 1.0.")
++    if not isinstance(resolucion, int) or not (4 <= resolucion <= 100):
++        raise ValueError("La resolución debe ser un entero entre 4 y 100.")
++    paso = (2 * math.pi) / resolucion
++    vertices = []
++    for i in range(resolucion):
++        u = i * paso
++        for j in range(resolucion):
++            v = j * paso
++            d = vertice_dona(u, v)
++            c = vertice_taza(u, v)
++            px = round((1.0 - t) * d[0] + t * c[0], 4)
++            py = round((1.0 - t) * d[1] + t * c[1], 4)
++            pz = round((1.0 - t) * d[2] + t * c[2], 4)
++            vertices.append([px, py, pz])
++    return vertices
++
+diff --git a/Modelador3D_matrices/index.html b/Modelador3D_matrices/index.html
+index 4496595..764db20 100644
+--- a/Modelador3D_matrices/index.html
++++ b/Modelador3D_matrices/index.html
+@@ -214,7 +214,7 @@
+ 
+         .figure-grid {
+             display: grid;
+-            grid-template-columns: repeat(3, 1fr);
++            grid-template-columns: repeat(4, 1fr);
+             gap: 0.5rem;
+             background: rgba(15, 17, 26, 0.7);
+             padding: 5px;
+@@ -343,6 +343,26 @@
+                     <span class="fig-icon">🔺</span>
+                     <span class="fig-label">Pirámide</span>
+                 </button>
++                <button class="figure-btn" data-figura="morph" id="btn-fig-morph" title="Morph Dona a Taza">
++                    <span class="fig-icon">☕</span>
++                    <span class="fig-label">Dona→Taza</span>
++                </button>
++            </div>
++        </div>
++
++        <div class="control-group" id="morph-panel" style="display: none;">
++            <div class="control-section-title">Morph Topológico (Dona → Taza)</div>
++            <div class="slider-wrapper">
++                <div class="slider-header">
++                    <span id="figura-etiqueta">Taza</span>
++                    <span class="slider-value" id="val-morph-t">100%</span>
++                </div>
++                <input type="range" id="morph-t" min="0" max="1" step="0.02" value="1">
++            </div>
++            <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
++                <input type="text" id="figura-nombre" maxlength="60" placeholder="Nombre de la figura..."
++                    style="flex: 1; background: rgba(15,17,26,0.8); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 8px; padding: 0.45rem 0.6rem; font-size: 0.8rem;">
++                <button class="reset-btn" id="figura-guardar" style="margin-top: 0; padding: 0.45rem 0.75rem; font-size: 0.8rem;">Guardar</button>
+             </div>
+         </div>
+ 
+@@ -416,11 +436,34 @@
+         const figureConfigs = {
+             dona: { name: 'Dona (Toroide)', icon: '🍩', color: 0x00ffaa, hex: '#00ffaa', size: 0.15 },
+             esfera: { name: 'Esfera', icon: '🔮', color: 0x00d4ff, hex: '#00d4ff', size: 0.14 },
+-            piramide: { name: 'Pirámide', icon: '🔺', color: 0xffb700, hex: '#ffb700', size: 0.16 }
++            piramide: { name: 'Pirámide', icon: '🔺', color: 0xffb700, hex: '#ffb700', size: 0.16 },
++            morph: { name: 'Morph Dona → Taza', icon: '☕', color: 0xff3399, hex: '#ff3399', size: 0.16 }
+         };
+         let currentFigure = 'dona';
++        let morphSavedName = null;
++        let morphInFlight = false;
++        let pendingMorphT = null;
++        let transformInFlight = false;
++
++        function requestMorphVertices(tVal) {
++            if (!ws || ws.readyState !== WebSocket.OPEN) return;
++            if (morphInFlight) {
++                pendingMorphT = parseFloat(tVal);
++                return;
++            }
++            morphInFlight = true;
++            ws.send(JSON.stringify({ morph: { t: parseFloat(tVal), resolucion: 75 } }));
++        }
+ 
+         async function fetchModelData(figura = 'dona') {
++            const morphPanel = document.getElementById('morph-panel');
++            if (figura === 'morph') {
++                if (morphPanel) morphPanel.style.display = 'flex';
++                const tVal = parseFloat(document.getElementById('morph-t').value || '1');
++                requestMorphVertices(tVal);
++                return;
++            }
++            if (morphPanel) morphPanel.style.display = 'none';
+             const config = figureConfigs[figura] || figureConfigs['dona'];
+             const modelStatus = document.getElementById('model-status');
+ 
+@@ -522,6 +565,48 @@
+ 
+             ws.onmessage = (event) => {
+                 const data = JSON.parse(event.data);
++                if (data.morph && data.morph.vertices) {
++                    morphInFlight = false;
++                    if (currentFigure === 'morph') {
++                        createPointsMesh(data.morph.vertices, 'morph');
++                        // Interpolar color entre verde Dona (#00ffaa) y rosa/magenta Taza (#ff3399)
++                        if (pointsMesh && pointsMesh.material) {
++                            const tColor = data.morph.t;
++                            pointsMesh.material.color.setRGB(
++                                tColor * 1.0,
++                                (1.0 - tColor) * 1.0 + tColor * 0.2,
++                                (1.0 - tColor) * 0.67 + tColor * 0.6
++                            );
++                        }
++                        const pct = Math.round(data.morph.t * 100);
++                        document.getElementById('val-morph-t').innerText = `${pct}%`;
++                        const etiqueta = document.getElementById('figura-etiqueta');
++                        if (morphSavedName) {
++                            etiqueta.innerText = morphSavedName;
++                        } else if (data.morph.t === 0) {
++                            etiqueta.innerText = 'Dona';
++                        } else if (data.morph.t === 1) {
++                            etiqueta.innerText = 'Taza';
++                        } else {
++                            etiqueta.innerText = `Dona → Taza (${pct}%)`;
++                        }
++                        document.getElementById('model-status').innerText = `☕ ${etiqueta.innerText}: ${data.morph.vertices.length.toLocaleString()} vértices`;
++                        document.getElementById('model-status').style.color = '#ff3399';
++                    }
++                    if (pendingMorphT !== null) {
++                        const nextT = pendingMorphT;
++                        pendingMorphT = null;
++                        requestMorphVertices(nextT);
++                    }
++                    return;
++                }
++                if (data.guardada && data.guardada.nombre) {
++                    morphSavedName = data.guardada.nombre;
++                    document.getElementById('figura-etiqueta').innerText = morphSavedName;
++                    document.getElementById('model-status').innerText = `☕ Guardada: ${morphSavedName}`;
++                    return;
++                }
++                transformInFlight = false;
+                 if (data.matrix) {
+                     // Convert Array to Matrix4 and apply it to the group
+                     const m = new THREE.Matrix4();
+@@ -548,12 +633,13 @@
+         
+         function sendTransformData() {
+             if (!ws || ws.readyState !== WebSocket.OPEN) return;
++            if (transformInFlight) return;
+ 
+             const payload = {};
+             sliders.forEach(id => {
+                 payload[id] = parseFloat(document.getElementById(id).value);
+             });
+-            
++            transformInFlight = true;
+             ws.send(JSON.stringify(payload));
+         }
+ 
+@@ -571,6 +657,20 @@
+             });
+         });
+ 
++        document.getElementById('morph-t').addEventListener('input', (e) => {
++            morphSavedName = null;
++            const tVal = parseFloat(e.target.value);
++            document.getElementById('val-morph-t').innerText = `${Math.round(tVal * 100)}%`;
++            requestMorphVertices(tVal);
++        });
++
++        document.getElementById('figura-guardar').addEventListener('click', () => {
++            const nombre = document.getElementById('figura-nombre').value.trim();
++            const tVal = parseFloat(document.getElementById('morph-t').value || '0');
++            if (!nombre || !ws || ws.readyState !== WebSocket.OPEN) return;
++            ws.send(JSON.stringify({ guardar: { nombre: nombre, t: tVal, resolucion: 60 } }));
++        });
++
+         document.getElementById('btn-reset').addEventListener('click', () => {
+             sliders.forEach(id => {
+                 const el = document.getElementById(id);
+diff --git a/Modelador3D_matrices/main.py b/Modelador3D_matrices/main.py
+index 341b739..888c374 100644
+--- a/Modelador3D_matrices/main.py
++++ b/Modelador3D_matrices/main.py
+@@ -1,10 +1,10 @@
+-﻿import csv
++import csv
+ import math
++import os
+ from pathlib import Path
+ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+ from fastapi.middleware.cors import CORSMiddleware
+ import httpx
+-import numpy as np
+ from fastapi.responses import HTMLResponse
+ 
+ app = FastAPI(title="3D Model & Matrix Transformation API")
+@@ -38,7 +38,10 @@ app.add_middleware(
+ 
+ MODELS_DIR = Path("modelos_3d")
+ CSV_FILE_PATH = Path("modelo_3d.csv")
+-CALCULADORA_API_URL = "http://host.docker.internal:8000/operaciones/transformacion-3d"
++CALCULADORA_BASE_URL = os.getenv("CALCULADORA_BASE_URL", "http://host.docker.internal:8000")
++CALCULADORA_API_URL = f"{CALCULADORA_BASE_URL}/operaciones/transformacion-3d"
++CALCULADORA_MORPH_URL = f"{CALCULADORA_BASE_URL}/calc/morph"
++CALCULADORA_FIGURAS_URL = f"{CALCULADORA_BASE_URL}/figuras"
+ 
+ def cargar_puntos_csv(path: Path) -> list[list[float]]:
+     puntos = []
+@@ -91,7 +94,7 @@ def listar_modelos():
+ @app.get("/api/modelo-csv")
+ def obtener_puntos_modelo(figura: str = "dona"):
+     figura_norm = figura.strip().lower()
+-    
++
+     mapeo = {
+         "dona": "dona.csv",
+         "toroide": "dona.csv",
+@@ -104,10 +107,10 @@ def obtener_puntos_modelo(figura: str = "dona"):
+         "pirámide": "piramide.csv",
+         "modelo_3d_piramide": "modelo_3d_piramide.csv"
+     }
+-    
++
+     archivo_objetivo = mapeo.get(figura_norm, f"{figura_norm}.csv")
+     path = MODELS_DIR / archivo_objetivo
+-    
++
+     if not path.exists():
+         if Path(archivo_objetivo).exists():
+             path = Path(archivo_objetivo)
+@@ -115,7 +118,7 @@ def obtener_puntos_modelo(figura: str = "dona"):
+             path = MODELS_DIR / "dona.csv"
+         elif CSV_FILE_PATH.exists():
+             path = CSV_FILE_PATH
+-            
++
+     puntos = cargar_puntos_csv(path)
+     return {
+         "figura": figura_norm,
+@@ -131,12 +134,65 @@ def obtener_puntos_por_figura(figura: str):
+ @app.websocket("/ws/transform")
+ async def websocket_transform(websocket: WebSocket):
+     await websocket.accept()
+-    
++
+     async with httpx.AsyncClient() as client:
+         try:
+             while True:
+                 data = await websocket.receive_json()
+-                
++
++                # 1. Relevo de deformación topológica (Morph Dona -> Taza)
++                if "morph" in data and isinstance(data["morph"], dict):
++                    try:
++                        t_val = float(data["morph"].get("t", 0.0))
++                        res_val = int(data["morph"].get("resolucion", 50))
++                    except (ValueError, TypeError):
++                        await websocket.send_json({"status": "error", "detail": "parámetros de morph inválidos"})
++                        continue
++                    if not math.isfinite(t_val) or not (0.0 <= t_val <= 1.0) or not (4 <= res_val <= 100):
++                        await websocket.send_json({"status": "error", "detail": "parámetros de morph fuera de rango"})
++                        continue
++                    resp_morph = await client.post(
++                        CALCULADORA_MORPH_URL,
++                        json={"t": t_val, "resolucion": res_val},
++                        timeout=5.0,
++                    )
++                    if resp_morph.status_code == 200:
++                        body = resp_morph.json()
++                        await websocket.send_json({
++                            "status": "ok",
++                            "morph": {
++                                "t": t_val,
++                                "total_puntos": body.get("total_puntos", 0),
++                                "vertices": body.get("vertices", []),
++                            }
++                        })
++                    else:
++                        await websocket.send_json({"status": "error", "detail": "error calculando morph"})
++                    continue
++
++                # 2. Relevo de guardado de figura con nombre
++                if "guardar" in data and isinstance(data["guardar"], dict):
++                    nombre = str(data["guardar"].get("nombre", "")).strip()
++                    try:
++                        t_val = float(data["guardar"].get("t", 0.0))
++                        res_val = int(data["guardar"].get("resolucion", 50))
++                    except (ValueError, TypeError):
++                        await websocket.send_json({"status": "error", "detail": "parámetros inválidos"})
++                        continue
++                    if not nombre or len(nombre) > 60:
++                        await websocket.send_json({"status": "error", "detail": "nombre de figura inválido"})
++                        continue
++                    resp_save = await client.post(
++                        CALCULADORA_FIGURAS_URL,
++                        json={"nombre": nombre, "t": t_val, "resolucion": res_val},
++                        timeout=5.0,
++                    )
++                    if resp_save.status_code == 200:
++                        await websocket.send_json({"status": "ok", "guardada": resp_save.json()})
++                    else:
++                        await websocket.send_json({"status": "error", "detail": "no se pudo guardar la figura"})
++                    continue
++
+                 try:
+                     tx = float(data.get("tx", 0.0))
+                     ty = float(data.get("ty", 0.0))
+@@ -157,19 +213,22 @@ async def websocket_transform(websocket: WebSocket):
+                 }
+ 
+                 response = await client.post(
+-                    CALCULADORA_API_URL, 
++                    CALCULADORA_API_URL,
+                     json=payload,
+                     timeout=5.0
+                 )
+-                
++
+                 if response.status_code == 200:
+                     matriz_resultante = response.json().get("resultado")
+-                    M = np.array(matriz_resultante)
+-                    matriz_flat = M.T.flatten().tolist()
++                    matriz_flat = [
++                        float(matriz_resultante[r][c])
++                        for c in range(len(matriz_resultante[0]))
++                        for r in range(len(matriz_resultante))
++                    ]
+                     await websocket.send_json({"matrix": matriz_flat, "status": "ok"})
+                 else:
+                     print(f"Error de Calculadora: {response.text}")
+-                    
++
+         except WebSocketDisconnect:
+             print("Cliente WebSocket desconectado")
+         except Exception as e:
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..f83efd3
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,85 @@
++# Ecosistema de Álgebra Lineal y Modelado 3D — `Desarrollo de proyectos10`
++
++**Autor:** Gerardo Marrufo (`@GeradoMarrufo200403`)  
++**Materia:** Implementación e Integración de IA y Automatización de Procesos — 10º Cuatrimestre  
++
++---
++
++## 🏗️ Arquitectura General del Sistema
++
++Este repositorio integra dos microservicios desacoplados en Python (**FastAPI**) junto con su suite de pruebas automatizadas y flujo de agente de IA en **n8n**:
++
++```text
++Desarrollo de proyectos10/
++├── Calculadora de matrices/        # Microservicio Matemático (Puerto 8000) - Arquitectura en Capas
++│   ├── app/
++│   │   ├── api/routers/            # Routers modulares: matrices.py, operations.py, figuras.py
++│   │   ├── models/                 # Esquemas y validadores Pydantic (models.py)
++│   │   ├── repositories/           # Persistencia en memoria (matrix_repo.py)
++│   │   ├── services/               # Motor algebraico y paramétrico 3D (matrix_service.py)
++│   │   └── main.py                 # Punto de entrada FastAPI + Middleware de Seguridad OWASP
++│   └── static/                     # Frontend "Gestor de Matrices - Estilo Excel" (index.html, app.js, styles.css)
++│
++├── Modelador3D_matrices/           # Microservicio de Renderizado WebGL / Three.js (Puerto 8001)
++│   ├── modelos_3d/                 # Nubes de puntos CSV (dona.csv, esfera.csv, piramide.csv)
++│   ├── index.html                  # Interfaz "Matrix API Transform" (Diseño Glassmorphism Neón)
++│   └── main.py                     # API de modelos CSV y relevo por WebSocket (/ws/transform)
++│
++├── test_e2e/                       # Suite de pruebas automatizadas (Pytest + Playwright)
++├── docker-compose.yaml             # Orquestador unificado de ambos microservicios
++├── pyproject.toml                  # Configuración de Ruff (linter) y Pytest
++└── requirements-dev.txt            # Dependencias para pruebas locales y análisis estático
++```
++
++---
++
++## 🚀 Instrucciones para Inicializar y Probar el Proyecto
++
++### 1. Levantar ambos servicios con Docker Compose
++Desde la carpeta raíz del repositorio ejecuta:
++
++```bash
++docker compose up --build -d
++```
++
++Una vez levantados los contenedores, verifica los servicios en tu navegador:
++
++| Servicio | Puerto Local | Enlace Directo | Descripción |
++| :--- | :---: | :--- | :--- |
++| **Calculadora de Matrices (UI Estilo Excel)** | `8000` | http://localhost:8000 | Creación de matrices, suma, multiplicación, determinante y transpuesta. |
++| **Documentación OpenAPI / Swagger** | `8000` | http://localhost:8000/docs | Especificación interactiva de los routers `/matrices`, `/operaciones` y `/figuras`. |
++| **Visor 3D Glassmorphism (`Modelador3D_matrices`)** | `8001` | http://localhost:8001/view | Motor 3D con selector de figuras (`🍩 Dona`, `🔮 Esfera`, `🔺 Pirámide`, `☕ Dona→Taza`). |
++
++---
++
++## ☕ Nueva Funcionalidad (PR `feat/morph-dona-taza`): Deformación Topológica Dona → Taza
++
++1. **En el Microservicio `Calculadora de matrices` (`Puerto 8000`):**
++   * **`POST /operaciones/morph-3d`** (y alias `POST /calc/morph`): Calcula la interpolación lineal punto a punto $P(u,v,t) = (1-t)\cdot D(u,v) + t\cdot T(u,v)$ para $t \in [0, 1]$ y `resolucion` $\in [4, 100]$, devolviendo los vértices 3D, el estado topológico y una tabla `resumen_markdown` con la caja envolvente (*bounding box*) lista para **n8n**.
++   * **Router modular `app/api/routers/figuras.py`:**
++     * `POST /figuras`: Guarda o actualiza (idempotente por nombre) una configuración de figura con validación contra nombres vacíos o etiquetas HTML/XSS.
++     * `GET /figuras` y `GET /figuras/{id}`: Consulta las figuras almacenadas.
++     * `DELETE /figuras/{id}`: Elimina una figura por su identificador.
++
++2. **En el Visor 3D `Modelador3D_matrices` (`http://localhost:8001/view`):**
++   * Nuevo botón **`☕ Dona→Taza`** en el panel *Glassmorphism* que despliega el control deslizante **Morph Topológico (Dona → Taza)** (`0%` a `100%`), interpola dinámicamente el color neón de la nube de puntos (`#00ffaa` $\rightarrow$ `#ff3399`) y permite guardar la figura con nombre personalizado a través del WebSocket `/ws/transform`.
++
++---
++
++## 🧪 Ejecución de Pruebas y Análisis Estático (Calidad)
++
++Para instalar las herramientas de desarrollo y correr las pruebas localmente:
++
++```bash
++pip install -r requirements-dev.txt
++
++# 1. Ejecutar pruebas de morph, regresión de seguridad OWASP y visor (sin requerir navegador)
++pytest test_e2e/test_morph.py test_e2e/test_regresion_seguridad.py test_e2e/test_vision.py -v
++
++# 2. Ejecutar pruebas E2E de navegador con Playwright (con los contenedores corriendo)
++playwright install chromium
++pytest test_e2e/test_calculadora.py test_e2e/test_humo.py -v
++
++# 3. Ejecutar análisis estático con Ruff
++ruff check "Calculadora de matrices" "Modelador3D_matrices" "test_e2e"
++```
+diff --git a/docker-compose.yaml b/docker-compose.yaml
+new file mode 100644
+index 0000000..17ee4ce
+--- /dev/null
++++ b/docker-compose.yaml
+@@ -0,0 +1,30 @@
++services:
++  calculadora:
++    build: "./Calculadora de matrices"
++    ports:
++      - "8000:8000"
++    volumes:
++      - "./Calculadora de matrices:/app"
++    environment:
++      - PYTHONDONTWRITEBYTECODE=1
++      - PYTHONUNBUFFERED=1
++    healthcheck:
++      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
++      interval: 5s
++      timeout: 3s
++      retries: 3
++      start_period: 3s
++
++  modelador3d:
++    build: "./Modelador3D_matrices"
++    ports:
++      - "8001:8000"
++    volumes:
++      - "./Modelador3D_matrices:/app"
++    environment:
++      - PYTHONUNBUFFERED=1
++      - CALCULADORA_BASE_URL=http://calculadora:8000
++    depends_on:
++      calculadora:
++        condition: service_healthy
++
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..2cc3c11
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,18 @@
++[tool.ruff]
++line-length = 100
++target-version = "py311"
++extend-exclude = ["venv", ".venv", "**/venv"]
++
++[tool.ruff.lint]
++select = ["E", "W", "F", "B", "S", "C90"]
++
++[tool.ruff.lint.mccabe]
++max-complexity = 10
++
++[tool.ruff.lint.per-file-ignores]
++"test_e2e/*" = ["S101"]
++
++[tool.pytest.ini_options]
++testpaths = ["test_e2e"]
++pythonpath = ["Calculadora de matrices"]
++
+diff --git a/requirements-dev.txt b/requirements-dev.txt
+new file mode 100644
+index 0000000..5461b8c
+--- /dev/null
++++ b/requirements-dev.txt
+@@ -0,0 +1,7 @@
++fastapi>=0.100.0
++uvicorn[standard]>=0.23.0
++pydantic>=2.0.0
++httpx>=0.24.1
++pytest>=8.0.0
++pytest-playwright>=0.5.0
++ruff>=0.6.0
+diff --git a/test_e2e/conftest.py b/test_e2e/conftest.py
+index 2c278c7..2693c88 100644
+--- a/test_e2e/conftest.py
++++ b/test_e2e/conftest.py
+@@ -1,18 +1,17 @@
+ import os
+- 
++
+ import pytest
+- 
+- 
++
++
+ @pytest.fixture(scope="session")
+ 
+ def calculadora_url() -> str:
+ 
+     return os.getenv("CALCULADORA_URL", "http://localhost:8000")
+- 
+- 
++
++
+ @pytest.fixture(scope="session")
+ 
+ def visor_url() -> str:
+ 
+     return os.getenv("VISOR_URL", "http://localhost:8001/view")
+- 
+\ No newline at end of file
+diff --git a/test_e2e/test_humo.py b/test_e2e/test_humo.py
+index 2b8baf6..e33c44c 100644
+--- a/test_e2e/test_humo.py
++++ b/test_e2e/test_humo.py
+@@ -1,5 +1,5 @@
+ from playwright.sync_api import Page, expect
+- 
++
+ VISOR = "http://localhost:8001/view"
+ 
+ def test_visor_se_conecta(page: Page):
+diff --git a/test_e2e/test_morph.py b/test_e2e/test_morph.py
+new file mode 100644
+index 0000000..239b59d
+--- /dev/null
++++ b/test_e2e/test_morph.py
+@@ -0,0 +1,61 @@
++"""Pruebas del morph Dona -> Taza y guardado de figuras en Calculadora de matrices y Modelador 3D."""
++import os
++import sys
++from pathlib import Path
++from fastapi.testclient import TestClient
++
++CALC_DIR = Path(__file__).resolve().parents[1] / "Calculadora de matrices"
++if str(CALC_DIR) not in sys.path:
++    sys.path.insert(0, str(CALC_DIR))
++
++anterior = os.getcwd()
++os.chdir(CALC_DIR)
++try:
++    from app.main import app as calc_app
++    from app.services import matrix_service
++finally:
++    os.chdir(anterior)
++
++client = TestClient(calc_app)
++
++
++def test_morph_t0_coincide_con_dona():
++    puntos = matrix_service.calcular_morph(0.0, 10)
++    assert len(puntos) == 100
++    assert puntos[0] == [15.0, 0.0, 0.0]
++
++
++def test_morph_t1_coincide_con_taza():
++    puntos_dona = matrix_service.calcular_morph(0.0, 10)
++    puntos_taza = matrix_service.calcular_morph(1.0, 10)
++    assert len(puntos_taza) == 100
++    assert puntos_dona != puntos_taza
++
++
++def test_endpoint_calc_morph_devuelve_vertices():
++    r = client.post("/operaciones/morph-3d", json={"t": 0.5, "resolucion": 12})
++    assert r.status_code == 200
++    body = r.json()
++    assert body["total_puntos"] == 144
++    assert len(body["vertices"]) == 144
++    assert "resumen_markdown" in body
++    assert "Transición (50.0%)" in body["resumen_markdown"]
++
++
++def test_guardar_y_listar_figura_morph():
++    r = client.post("/figuras", json={"nombre": "Taza Glassmorphism", "t": 1.0, "resolucion": 20})
++    assert r.status_code == 200
++    data = r.json()
++    assert data["nombre"] == "Taza Glassmorphism"
++    fig_id = data["id"]
++
++    # Consultar por ID y en la lista
++    assert client.get(f"/figuras/{fig_id}").status_code == 200
++    lista = client.get("/figuras").json()
++    assert any(f["nombre"] == "Taza Glassmorphism" for f in lista)
++
++    # Eliminar figura por ID
++    assert client.delete(f"/figuras/{fig_id}").status_code == 204
++    assert client.get(f"/figuras/{fig_id}").status_code == 404
++
++
+diff --git a/test_e2e/test_regresion_seguridad.py b/test_e2e/test_regresion_seguridad.py
+index e69de29..8b1ff27 100644
+--- a/test_e2e/test_regresion_seguridad.py
++++ b/test_e2e/test_regresion_seguridad.py
+@@ -0,0 +1,62 @@
++"""Pruebas de regresión de seguridad OWASP para Calculadora de matrices y Modelador 3D."""
++import os
++import sys
++from pathlib import Path
++import pytest
++from fastapi.testclient import TestClient
++
++CALC_DIR = Path(__file__).resolve().parents[1] / "Calculadora de matrices"
++if str(CALC_DIR) not in sys.path:
++    sys.path.insert(0, str(CALC_DIR))
++
++anterior = os.getcwd()
++os.chdir(CALC_DIR)
++try:
++    from app.main import app as calc_app
++finally:
++    os.chdir(anterior)
++
++client = TestClient(calc_app)
++
++
++def test_cabeceras_seguridad_owasp_presentes():
++    """Verifica mitigaciones H-04, H-05, H-06 y H-07 (CSP, X-Frame-Options, nosniff, sin header server)."""
++    r = client.get("/")
++    assert r.status_code == 200
++    assert r.headers.get("X-Frame-Options") == "DENY"
++    assert r.headers.get("X-Content-Type-Options") == "nosniff"
++    assert "Content-Security-Policy" in r.headers
++    assert "frame-ancestors 'none'" in r.headers["Content-Security-Policy"]
++    assert "server" not in r.headers
++
++
++def test_proteccion_dos_algoritmico_determinante_mayor_a_8x8():
++    """Verifica mitigación H-01: rechazo de determinante para matrices mayores a 8x8."""
++    matriz_9x9 = [[float(i == j) for j in range(9)] for i in range(9)]
++    r_create = client.post("/matrices", json={"nombre": "M9x9", "datos": matriz_9x9})
++    assert r_create.status_code == 200
++    m_id = r_create.json()["id"]
++
++    r_det = client.get(f"/matrices/{m_id}/determinante")
++    assert r_det.status_code == 400
++    assert "8x8" in r_det.json()["detail"]
++
++
++def test_rechazo_matrices_gigantes_mayores_a_10x10():
++    """Verifica mitigación H-02: límite máximo 10x10 en backend Pydantic."""
++    matriz_11x11 = [[1.0] * 11 for _ in range(11)]
++    r = client.post("/matrices", json={"nombre": "Gigante", "datos": matriz_11x11})
++    assert r.status_code == 422
++
++
++@pytest.mark.parametrize("nombre_malicioso", [
++    "   ",
++    "<script>alert(1)</script>",
++    "figura\ncon_salto",
++    "{{7*7}}",
++])
++def test_rechazo_nombres_figura_invalidos_o_xss(nombre_malicioso):
++    """Verifica que el router de figuras rechace nombres en blanco o con etiquetas HTML/inyección."""
++    r = client.post("/figuras", json={"nombre": nombre_malicioso, "t": 0.5, "resolucion": 20})
++    assert r.status_code == 422
++
+diff --git a/test_e2e/test_vision.py b/test_e2e/test_vision.py
+index e69de29..6213306 100644
+--- a/test_e2e/test_vision.py
++++ b/test_e2e/test_vision.py
+@@ -0,0 +1,48 @@
++"""Pruebas del servicio Modelador3D_matrices (modelos CSV, visor Glassmorphism y cabeceras)."""
++import importlib.util
++import os
++from pathlib import Path
++from fastapi.testclient import TestClient
++
++VISOR_DIR = Path(__file__).resolve().parents[1] / "Modelador3D_matrices"
++
++
++def cargar_visor_app():
++    anterior = os.getcwd()
++    os.chdir(VISOR_DIR)
++    try:
++        spec = importlib.util.spec_from_file_location("modelador_main", VISOR_DIR / "main.py")
++        mod = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(mod)
++        return mod.app
++    finally:
++        os.chdir(anterior)
++
++
++def test_visor_lista_modelos_3d_disponibles():
++    app = cargar_visor_app()
++    client = TestClient(app)
++    r = client.get("/api/modelos")
++    assert r.status_code == 200
++    ids = [m["id"] for m in r.json()["modelos"]]
++    assert {"dona", "esfera", "piramide"}.issubset(set(ids))
++
++
++def test_visor_sirve_interfaz_glassmorphism_con_controles_morph():
++    anterior = os.getcwd()
++    os.chdir(VISOR_DIR)
++    try:
++        app = cargar_visor_app()
++        client = TestClient(app)
++        r = client.get("/view")
++        assert r.status_code == 200
++        html = r.text
++        assert "Matrix API Transform" in html
++        assert "btn-fig-dona" in html
++        assert "btn-fig-esfera" in html
++        assert "btn-fig-piramide" in html
++        assert "btn-fig-morph" in html
++        assert "morph-panel" in html
++    finally:
++        os.chdir(anterior)
++

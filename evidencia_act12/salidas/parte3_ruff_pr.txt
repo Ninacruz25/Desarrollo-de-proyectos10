@@ -1,0 +1,36 @@
+Calculadora de matrices/app/api/routers/matrices.py:53:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:22:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:35:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:52:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:122:101: E501 Line too long (105 > 100)
+Calculadora de matrices/app/api/routers/operations.py:126:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:132:101: E501 Line too long (121 > 100)
+Calculadora de matrices/app/main.py:12:101: E501 Line too long (106 > 100)
+Calculadora de matrices/app/models/models.py:20:101: E501 Line too long (112 > 100)
+Calculadora de matrices/app/models/models.py:28:101: E501 Line too long (110 > 100)
+Calculadora de matrices/app/models/models.py:37:101: E501 Line too long (123 > 100)
+Calculadora de matrices/app/models/models.py:38:101: E501 Line too long (110 > 100)
+Calculadora de matrices/app/models/models.py:42:101: E501 Line too long (106 > 100)
+Calculadora de matrices/app/models/models.py:49:101: E501 Line too long (101 > 100)
+Calculadora de matrices/app/services/matrix_service.py:12:101: E501 Line too long (114 > 100)
+Calculadora de matrices/app/services/matrix_service.py:37:101: E501 Line too long (134 > 100)
+Modelador3D_matrices/generar_modelos.py:64:5: E741 Ambiguous variable name: `l`
+Modelador3D_matrices/generar_modelos.py:71:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generar_modelos.py:75:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:12:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:17:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:22:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:135:11: C901 `websocket_transform` is too complex (15 > 10)
+Modelador3D_matrices/main.py:149:101: E501 Line too long (113 > 100)
+Modelador3D_matrices/main.py:151:101: E501 Line too long (106 > 100)
+Modelador3D_matrices/main.py:152:101: E501 Line too long (118 > 100)
+Modelador3D_matrices/main.py:170:101: E501 Line too long (106 > 100)
+Modelador3D_matrices/main.py:180:101: E501 Line too long (104 > 100)
+Modelador3D_matrices/main.py:183:101: E501 Line too long (109 > 100)
+Modelador3D_matrices/main.py:193:101: E501 Line too long (112 > 100)
+test_e2e/test_calculadora.py:5:101: E501 Line too long (103 > 100)
+test_e2e/test_morph.py:1:101: E501 Line too long (101 > 100)
+test_e2e/test_regresion_seguridad.py:23:101: E501 Line too long (107 > 100)
+test_e2e/test_regresion_seguridad.py:59:101: E501 Line too long (101 > 100)
+Found 34 errors.
+[*] 5 fixable with `--fix`.

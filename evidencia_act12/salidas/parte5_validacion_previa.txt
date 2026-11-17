@@ -1,0 +1,53 @@
+== MORPH
+R1    baseline t=0.5 res=50                                          -> HTTP 200       31 ms     61084 B 
+R2    maximo permitido res=100 (10,000 vertices)                     -> HTTP 200       46 ms    242897 B 
+R3a   t=1.0001 (fuera de rango)                                      -> HTTP 422        3 ms       138 B 
+R3b   t=-0.1                                                         -> HTTP 422        1 ms       142 B 
+R3c   t=NaN (literal)                                                -> HTTP 500        1 ms        21 B 
+R3d   t=1e999 (infinito)                                             -> SIN RESPUESTA (conexion cerrada por el servidor)     1 ms
+R3e   t="0.5" como cadena                                            -> HTTP 200       10 ms     61084 B 
+R4    resolucion=101                                                 -> HTTP 422        1 ms       146 B 
+R4    resolucion=3                                                   -> HTTP 422        1 ms       146 B 
+R4    resolucion=0                                                   -> HTTP 422        1 ms       146 B 
+R4    resolucion=-1                                                  -> HTTP 422        1 ms       147 B 
+R4    resolucion=2.5                                                 -> HTTP 422        1 ms       155 B 
+R4    resolucion='50'                                                -> HTTP 200       10 ms     61084 B 
+R4    resolucion=1000000000                                          -> HTTP 422        1 ms       153 B 
+R4x   cuerpo vacio {} (usa valores por defecto)                      -> HTTP 200        8 ms     61632 B 
+R5    alias /operaciones/morph                                       -> HTTP 200        2 ms      9812 B 
+R5    alias /operaciones/morph-3d                                    -> HTTP 200        2 ms      9812 B 
+R5   las 3 rutas devuelven el mismo cuerpo: True
+== FIGURAS
+R6a   nombre de 60 caracteres (limite)                               -> HTTP 200        1 ms       105 B 
+R6b   nombre de 61 caracteres                                        -> HTTP 422        1 ms       208 B 
+R6c   nombre con instruccion para el agente                          -> HTTP 200        1 ms       100 B 
+R6d   nombre con <script>                                            -> HTTP 422        2 ms       179 B 
+R6e   nombre tipo SQLi (sin < > { } \n)                              -> HTTP 200        1 ms        76 B 
+R6f   unicode: RTL override + emoji                                  -> HTTP 200        1 ms        63 B 
+R6g   t=5 en /figuras                                                -> HTTP 422        1 ms       133 B 
+== IDEMPOTENCIA
+R7    mismo nombre, t=0.0                                            -> HTTP 200        1 ms        53 B 
+R7    mismo nombre, t=0.1                                            -> HTTP 200        1 ms        53 B 
+R7    mismo nombre, t=0.2                                            -> HTTP 200        1 ms        53 B 
+R7    mismo nombre, t=0.3                                            -> HTTP 200        1 ms        53 B 
+R7    mismo nombre, t=0.4                                            -> HTTP 200        1 ms        53 B 
+R7   ids devueltos [75, 75, 75, 75, 75]; figuras llamadas 'Repetida' en el sistema: 1; t final: [0.4]
+== CONTROL DE ACCESO
+R8a  GET /figuras con otro cliente: 200 5 figuras visibles
+R8b  GET /figuras/{id} ajeno: 200
+R8c  DELETE /figuras/{id} ajeno: 204 1 ms
+R8d  DELETE repetido (idempotencia del borrado): 404
+== ABUSO DE RECURSOS (1000 figuras distintas)
+R9   1000 POST distintos -> {200: 1000} en 0.8s (1192 req/s); GET /figuras ahora pesa 58401 B con 1004 figuras
+== CUERPO GRANDE
+R10  nombre de 5 MB -> HTTP 422 en 24 ms
+== WEBSOCKET ws://localhost:8001/ws/transform
+W1 morph valido res=75                                     -> 1/1 respuestas en 59 ms | 1a: {"status":"ok","morph":{"t":0.5,"total_puntos":5625,"vertices":[[10.25,2.6,0.0],
+W2 Origin ajeno http://evil.example                        -> 1/1 respuestas en 6 ms | 1a: {"status":"ok","morph":{"t":0.5,"total_puntos":400,"vertices":[[10.25,2.6,0.0],[
+W3 t=2 (fuera de rango)                                    -> 1/1 respuestas en 1 ms | 1a: {"status":"error","detail":"parámetros de morph fuera de rango"}
+W4 t="abc"                                                 -> 1/1 respuestas en 0 ms | 1a: {"status":"error","detail":"parámetros de morph inválidos"}
+W5 resolucion=1000000                                      -> 1/1 respuestas en 3 ms | 1a: {"status":"error","detail":"parámetros de morph fuera de rango"}
+W6 guardar con t=5 (sin validar en el visor)               -> 1/1 respuestas en 2 ms | 1a: {"status":"error","detail":"no se pudo guardar la figura"}
+W7 guardar nombre con instruccion                          -> 1/1 respuestas en 3 ms | 1a: {"status":"ok","guardada":{"t":0.5,"resolucion":20,"nombre":"Ignora tus instrucc
+W8 RAFAGA: 100 morph res=100 sin esperar                   -> 100/100 respuestas en 4029 ms | 1a: {"status":"ok","morph":{"t":0.0,"total_puntos":10000,"vertices":[[15.0,0.0,0.0],
+W9 JSON invalido (texto plano)                             -> RECHAZADO ConnectionClosedError: no close frame received or sent

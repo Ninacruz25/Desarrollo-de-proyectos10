@@ -1,0 +1,12 @@
+{
+  "barrido_51_pasos": {
+    "mensajes_enviados": 291,
+    "respuestas": 291
+  },
+  "consola": [
+    "[warning] [.WebGL-0x10c00457000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x10c00457000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x10c00457000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x10c00457000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ]
+}

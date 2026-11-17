@@ -1,0 +1,50 @@
+Calculadora de matrices/app/api/routers/matrices.py:53:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:21:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:34:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:44:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:51:9: B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+Calculadora de matrices/app/api/routers/operations.py:66:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:73:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:80:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:87:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:94:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py:99:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py:19:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py:22:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py:25:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py:45:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py:49:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/repositories/matrix_repo.py:1:31: F401 [*] `app.models.models.MatrixCreate` imported but unused
+Calculadora de matrices/app/services/matrix_service.py:4:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py:9:101: E501 Line too long (114 > 100)
+Calculadora de matrices/app/services/matrix_service.py:10:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py:29:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py:34:101: E501 Line too long (134 > 100)
+Calculadora de matrices/app/services/matrix_service.py:35:1: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py:41:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generar_modelos.py:64:5: E741 Ambiguous variable name: `l`
+Modelador3D_matrices/generar_modelos.py:71:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generar_modelos.py:75:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:12:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:17:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/generate_torus.py:22:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:94:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:107:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:110:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:118:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:134:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:139:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:160:41: W291 [*] Trailing whitespace
+Modelador3D_matrices/main.py:164:1: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py:172:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:2:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:4:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:5:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:11:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:12:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:18:1: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py:18:2: W292 [*] No newline at end of file
+test_e2e/test_calculadora.py:5:101: E501 Line too long (103 > 100)
+test_e2e/test_humo.py:2:1: W293 [*] Blank line contains whitespace
+Found 48 errors.
+[*] 40 fixable with `--fix`.

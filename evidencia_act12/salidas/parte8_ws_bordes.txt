@@ -1,0 +1,6 @@
+resolucion=1e400 (inf al parsear)              -> CONEXION CERRADA: ConnectionClosedError
+resolucion=7.9 (se trunca a 7)                 -> respuesta: {"status":"ok","morph":{"t":0.5,"total_puntos":49,"vertices":[[10.25,2.6,0.0],[9.3087,2.37
+t=true (float(True)=1.0)                       -> respuesta: {"status":"ok","morph":{"t":1.0,"total_puntos":400,"vertices":[[5.5,5.2,0.0],[5.5,5.1413,0
+t=1e400 (inf)                                  -> respuesta: {"status":"error","detail":"parámetros de morph fuera de rango"}
+mensaje JSON que no es objeto: 5               -> CONEXION CERRADA: ConnectionClosedError
+mensaje JSON que no es objeto: [1]             -> CONEXION CERRADA: ConnectionClosedError

@@ -1,0 +1,35 @@
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/api/routers/operations.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/main.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/repositories/matrix_repo.py: F401 [*] `app.models.models.MatrixCreate` imported but unused
+Calculadora de matrices/app/services/matrix_service.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py: W293 [*] Blank line contains whitespace
+Calculadora de matrices/app/services/matrix_service.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W291 [*] Trailing whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+Modelador3D_matrices/main.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W292 [*] No newline at end of file
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/conftest.py: W293 [*] Blank line contains whitespace
+test_e2e/test_humo.py: W293 [*] Blank line contains whitespace

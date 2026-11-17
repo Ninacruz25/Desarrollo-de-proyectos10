@@ -1,0 +1,2 @@
+60 rondas x 64 POST simultaneos con el MISMO nombre nuevo: rondas con figuras duplicadas = 0; maximo de copias del mismo nombre = 0
+figuras en el sistema: 60 (esperado si fuera idempotente: 60 )
