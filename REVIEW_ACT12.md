@@ -685,6 +685,18 @@ Borradores listos para publicar en la pestaña *Files changed* del PR #1 (versi�
 
 **[Bloqueante] El slider del morph queda congelado tras un error o una reconexión**
 
+**Código señalado** (`Modelador3D_matrices/index.html`, líneas 564–570; la línea **569** es la marcada):
+
+```
+ 564 | };
+ 565 | 
+ 566 | ws.onmessage = (event) => {
+ 567 |     const data = JSON.parse(event.data);
+ 568 |     if (data.morph && data.morph.vertices) {
+ 569 |         morphInFlight = false;
+ 570 |         if (currentFigure === 'morph') {
+```
+
 **Qué:** `morphInFlight` solo se baja cuando llega un mensaje con `data.morph.vertices`. Los `{"status":"error"}` que manda el relevo y la reconexión del WebSocket no lo reinician.
 
 **Por qué importa:** Tras un error del servidor o una conexión caída a mitad de una petición, el slider del morph deja de enviar hasta recargar la página, aunque el visor muestre «Conectado». Estos flags no existen en `main`: es una regresión.
@@ -697,6 +709,22 @@ Borradores listos para publicar en la pestaña *Files changed* del PR #1 (versi�
 
 **[Bloqueante] `transformInFlight` también puede bloquear los sliders que ya existían, y descarta el último valor**
 
+**Código señalado** (`Modelador3D_matrices/index.html`, líneas 634–644; la línea **636** es la marcada):
+
+```
+ 634 | function sendTransformData() {
+ 635 |     if (!ws || ws.readyState !== WebSocket.OPEN) return;
+ 636 |     if (transformInFlight) return;
+ 637 | 
+ 638 |     const payload = {};
+ 639 |     sliders.forEach(id => {
+ 640 |         payload[id] = parseFloat(document.getElementById(id).value);
+ 641 |     });
+ 642 |     transformInFlight = true;
+ 643 |     ws.send(JSON.stringify(payload));
+ 644 | }
+```
+
 **Qué:** `sendTransformData` hace `return` si hay una petición en vuelo, y el flag solo se baja al llegar una respuesta. Si el relevo no responde (por ejemplo la rama `else: print(...)` de `websocket_transform`, que no envía nada al cliente) no se vuelve a enviar nada. Además, el valor descartado no se guarda como pendiente (el morph sí usa `pendingMorphT`).
 
 **Por qué importa:** Una transformación sin respuesta deja inservibles los sliders de traslación y rotación, que funcionaban antes del PR. Y al soltar el slider el modelo puede quedar en un valor distinto del mostrado.
@@ -708,6 +736,19 @@ Borradores listos para publicar en la pestaña *Files changed* del PR #1 (versi�
 #### Comentario 3 — `Calculadora de matrices/app/services/matrix_service.py` línea 59
 
 **[Bloqueante] La malla de la taza no es continua, y la descripción promete una «deformación topológica continua»**
+
+**Código señalado** (`Calculadora de matrices/app/services/matrix_service.py`, líneas 59–66; la línea **59** es la marcada):
+
+```
+  59 | def vertice_taza(u: float, v: float) -> list[float]:
+  60 |     """Calcula un vértice de una Taza con asa sobre el mismo dominio (u, v) en [0, 2*pi)."""
+  61 |     fraccion_asa = 0.25 * 2 * math.pi
+  62 |     if u < fraccion_asa:
+  63 |         # Asa lateral de la taza
+  64 |         s = u / fraccion_asa
+  65 |         ang = math.pi / 2 - math.pi * s
+  66 |         cx = 5.5 + 4.5 * math.cos(ang)
+```
 
 **Qué:** `vertice_taza` arma la superficie por tramos (asa, base, pared exterior, pared interior) que no empalman entre sí, de modo que el morph no es una deformación continua de una dona en una taza.
 
@@ -723,6 +764,13 @@ Medición con `resolucion=100`: saltos de 8.3 a 15.0 unidades en `u=24→25` (un
 
 **[Mayor] `t=NaN` o `Infinity` devuelven HTTP 500 en lugar de 422**
 
+**Código señalado** (`Calculadora de matrices/app/models/models.py`, líneas 37–38; la línea **37** es la marcada):
+
+```
+  37 | t: float = Field(0.0, ge=0.0, le=1.0, allow_inf_nan=False, description="Factor de deformación: 0.0 = Dona, 1.0 = Taza"
+  38 | resolucion: int = Field(50, ge=4, le=100, description="Resolución por eje (genera resolucion^2 vértices)")
+```
+
 **Qué:** `allow_inf_nan=False` rechaza el valor, pero el manejador de errores de validación de FastAPI intenta serializar el valor rechazado y falla con `ValueError: Out of range float values are not JSON compliant`.
 
 **Por qué importa:** Un cliente recibe un 500 sin detalle, la respuesta de error sale sin las cabeceras de seguridad del proyecto (`X-Frame-Options`, `X-Content-Type-Options`, CSP) y, con `1e999`, se corta la conexión. Es la misma clase de defecto que el hallazgo H-08 de la Unidad II (`NaN`/`Infinity`), ahora en HTTP.
@@ -737,6 +785,18 @@ Con `curl -si` la respuesta 500 no trae las cabeceras de seguridad que sí traen
 
 **[Mayor] `POST /figuras` no tiene límite de almacenamiento**
 
+**Código señalado** (`Calculadora de matrices/app/repositories/matrix_repo.py`, líneas 35–41; la línea **35** es la marcada):
+
+```
+  35 | class FiguraMorphRepository:
+  36 |     def __init__(self):
+  37 |         self.figuras = {}
+  38 |         self.counter = 1
+  39 | 
+  40 |     def guardar(self, data: dict) -> dict:
+  41 |         nombre = data["nombre"].strip()
+```
+
 **Qué:** `FiguraMorphRepository` es un diccionario global en memoria sin tope: cada nombre distinto crea una figura nueva.
 
 **Por qué importa:** Cualquiera puede llenar la memoria del servicio (diseño inseguro / abuso de recursos, A04). Un agente de n8n que lista las figuras recibe además una respuesta cada vez mayor.
@@ -748,6 +808,16 @@ Con `curl -si` la respuesta 500 no trae las cabeceras de seguridad que sí traen
 #### Comentario 6 — `Calculadora de matrices/app/api/routers/figuras.py` línea 30
 
 **[Mayor] `DELETE` y `GET` de figuras sin ningún control de acceso**
+
+**Código señalado** (`Calculadora de matrices/app/api/routers/figuras.py`, líneas 30–34; la línea **30** es la marcada):
+
+```
+  30 | @router.delete("/{id}", status_code=204)
+  31 | def eliminar_figura(id: int):
+  32 |     """Elimina una figura guardada por su ID."""
+  33 |     if not figura_db.eliminar(id):
+  34 |         raise HTTPException(404, "Figura no encontrada")
+```
 
 **Qué:** Los endpoints de figuras operan sobre el mismo diccionario para cualquier cliente y los `id` son secuenciales; no hay sesión, propietario ni autenticación.
 
@@ -763,6 +833,18 @@ Con `curl -si` la respuesta 500 no trae las cabeceras de seguridad que sí traen
 
 **[Mayor] La validación del nombre es una lista negra y deja pasar instrucciones para el agente**
 
+**Código señalado** (`Calculadora de matrices/app/models/models.py`, líneas 46–52; la línea **50** es la marcada):
+
+```
+  46 | def validar_nombre_seguro(cls, v: str) -> str:
+  47 |     limpio = v.strip()
+  48 |     if not limpio:
+  49 |         raise ValueError("El nombre de la figura no puede estar vacío ni contener solo espacios")
+  50 |     if any(c in limpio for c in ("<", ">", "{", "}", "\n", "\r")):
+  51 |         raise ValueError("El nombre contiene caracteres no permitidos")
+  52 |     return limpio
+```
+
 **Qué:** Solo se rechazan `< > { }` y saltos de línea. El texto libre pasa intacto, incluida una orden dirigida a un modelo de lenguaje.
 
 **Por qué importa:** El nombre se devuelve en `GET /figuras`, que es lo que lee la herramienta del agente de n8n: un nombre con instrucciones llega al modelo como si fuera dato confiable (inyección indirecta). La protección XSS de este tipo de lista negra tampoco es completa: pasan `\t`, `\x00`, comillas, `&` y caracteres bidi.
@@ -776,6 +858,17 @@ Prueba en rojo [`test_hallazgo_nombre_con_instrucciones_para_el_agente_se_rechaz
 #### Comentario 8 — `test_e2e/test_morph.py` línea 28
 
 **[Mayor] Las pruebas del PR pasan, pero casi no detectan defectos**
+
+**Código señalado** (`test_e2e/test_morph.py`, líneas 28–33; la línea **28** es la marcada):
+
+```
+  28 | def test_morph_t1_coincide_con_taza():
+  29 |     puntos_dona = matrix_service.calcular_morph(0.0, 10)
+  30 |     puntos_taza = matrix_service.calcular_morph(1.0, 10)
+  31 |     assert len(puntos_taza) == 100
+  32 |     assert puntos_dona != puntos_taza
+  33 | 
+```
 
 **Qué:** `test_morph_t1_coincide_con_taza` solo comprueba el número de puntos y que `taza != dona`; no verifica ningún valor de la taza. Tampoco hay pruebas de los límites ni del relevo WebSocket ni del front.
 
@@ -791,6 +884,20 @@ Solo se detectaron el morph al revés y el `DELETE` que no borra. Ver [bitácora
 
 **[Menor] `websocket_transform`: complejidad, `OverflowError` y sin límite de frecuencia**
 
+**Código señalado** (`Modelador3D_matrices/main.py`, líneas 144–152; la línea **144** es la marcada):
+
+```
+ 144 | if "morph" in data and isinstance(data["morph"], dict):
+ 145 |     try:
+ 146 |         t_val = float(data["morph"].get("t", 0.0))
+ 147 |         res_val = int(data["morph"].get("resolucion", 50))
+ 148 |     except (ValueError, TypeError):
+ 149 |         await websocket.send_json({"status": "error", "detail": "parámetros de morph inválidos"})
+ 150 |         continue
+ 151 |     if not math.isfinite(t_val) or not (0.0 <= t_val <= 1.0) or not (4 <= res_val <= 100):
+ 152 |         await websocket.send_json({"status": "error", "detail": "parámetros de morph fuera de rango"})
+```
+
 **Qué:** La función pasó de complejidad 7 a **15** (umbral del proyecto: 10; 8 `continue`). El `except (ValueError, TypeError)` no captura `OverflowError`: `resolucion=1e400` (que Python lee como `inf`) cierra la conexión; `7.9` se trunca a 7 y `true` se acepta como número. No hay límite de mensajes por conexión.
 
 **Por qué importa:** La función es difícil de probar y de mantener, un mensaje mal formado derriba la conexión, y un cliente puede pedir mallas de 243 KB sin freno.
@@ -805,6 +912,17 @@ Solo se detectaron el morph al revés y el `DELETE` que no borra. Ver [bitácora
 
 **[Pregunta] Tres rutas para la misma función y lógica de resumen en el router**
 
+**Código señalado** (`Calculadora de matrices/app/api/routers/operations.py`, líneas 119–124; la línea **121** es la marcada):
+
+```
+ 119 | @router.post("/morph")
+ 120 | @router.post("/morph-3d")
+ 121 | def morph_dona_taza(params: MorphParams):
+ 122 |     """Calcula la malla interpolada entre la Dona (t=0) y la Taza (t=1) con resumen Markdown para n8n."""
+ 123 |     try:
+ 124 |         vertices = matrix_service.calcular_morph(params.t, params.resolucion)
+```
+
 **Qué:** El mismo handler responde en `/operaciones/morph` y `/operaciones/morph-3d` (dos decoradores) y `main.py` define un tercer alias `/calc/morph` que llama a la función del router. Además la caja envolvente y la tabla Markdown se construyen aquí y no en `services/`.
 
 **Por qué importa:** Es tres superficies que mantener y probar, y el cálculo del resumen no se puede probar sin HTTP. Rompe la separación API → servicios → repositorio que acordamos.
@@ -816,6 +934,17 @@ Solo se detectaron el morph al revés y el `DELETE` que no borra. Ver [bitácora
 #### Comentario 11 — `Calculadora de matrices/app/api/routers/operations.py` línea 152
 
 **[Menor] La respuesta del morph viene con todos los vértices aunque el resumen se anuncia «para n8n»**
+
+**Código señalado** (`Calculadora de matrices/app/api/routers/operations.py`, líneas 148–153; la línea **152** es la marcada):
+
+```
+ 148 |     "resolucion": params.resolucion,
+ 149 |     "estado": estado,
+ 150 |     "total_puntos": len(vertices),
+ 151 |     "resumen_markdown": resumen_md,
+ 152 |     "vertices": vertices
+ 153 | }
+```
 
 **Qué:** `resumen_markdown` se devuelve siempre junto con `vertices`.
 
@@ -831,6 +960,14 @@ Para probar el flujo del agente hubo que filtrar los campos en la herramienta, v
 
 **[Nit] La etiqueta de estado se contradice cerca de los extremos**
 
+**Código señalado** (`Calculadora de matrices/app/api/routers/operations.py`, líneas 131–133; la línea **132** es la marcada):
+
+```
+ 131 | porcentaje = round(params.t * 100, 1)
+ 132 | estado = "Dona (Toroide)" if params.t == 0 else ("Taza Completa" if params.t == 1 else f"Transición ({porcentaje}%)")
+ 133 | 
+```
+
 **Qué:** Se compara `t == 0` y `t == 1` de forma exacta pero el porcentaje se redondea a un decimal.
 
 **Por qué importa:** `t=0.9996` devuelve «Transición (100.0%)» y `t=0.0004` devuelve «Transición (0.0%)»: confuso para quien lea la tabla.
@@ -843,6 +980,16 @@ Para probar el flujo del agente hubo que filtrar los campos en la herramienta, v
 
 **[Menor] Cambio de comportamiento no declarado: `MatrixCreate` ahora rechaza `datos=[]`**
 
+**Código señalado** (`Calculadora de matrices/app/models/models.py`, líneas 15–19; la línea **16** es la marcada):
+
+```
+  15 | def validar_dimensiones_y_valores(cls, v):
+  16 |     if not v or not v[0]:
+  17 |         raise ValueError("La matriz no puede estar vacía")
+  18 |     if len(v) > MAX_DIMENSION_MATRIZ or len(v[0]) > MAX_DIMENSION_MATRIZ:
+  19 |         raise ValueError(
+```
+
 **Qué:** Esta validación endurece `MatrixCreate`, que no forma parte del morph.
 
 **Por qué importa:** `POST /matrices` con `datos=[]` se aceptaba en `main` y ahora devuelve 422: es un cambio rompiente que no aparece en la descripción. Junto con el cambio de CORS, quitar `numpy`, subir la versión y los cambios de espacios en blanco, el PR es difícil de revisar y de revertir.
@@ -854,6 +1001,22 @@ Para probar el flujo del agente hubo que filtrar los campos en la herramienta, v
 #### Comentario 14 — `Calculadora de matrices/app/repositories/matrix_repo.py` línea 40
 
 **[Pregunta] `POST /figuras` actúa como `PUT` y no hay persistencia**
+
+**Código señalado** (`Calculadora de matrices/app/repositories/matrix_repo.py`, líneas 40–50; la línea **40** es la marcada):
+
+```
+  40 | def guardar(self, data: dict) -> dict:
+  41 |     nombre = data["nombre"].strip()
+  42 |     for fig in self.figuras.values():
+  43 |         if fig["nombre"] == nombre:
+  44 |             fig["t"] = data["t"]
+  45 |             fig["resolucion"] = data["resolucion"]
+  46 |             return fig
+  47 | 
+  48 |     nueva = {
+  49 |         "id": self.counter,
+  50 |         "nombre": nombre,
+```
 
 **Qué:** Con el mismo nombre y otro `t`, `guardar` sobrescribe la figura y responde `200`, igual que al crear.
 
